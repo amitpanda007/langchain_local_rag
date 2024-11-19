@@ -2,24 +2,26 @@ import operator
 import json
 import os
 import getpass
+
+from langchain_nomic.embeddings import NomicEmbeddings
 from langchain_ollama import ChatOllama
 from typing_extensions import TypedDict
 from typing import List, Annotated
 from langchain.schema import Document
 from langchain_core.messages import HumanMessage, SystemMessage
-
+from langchain.vectorstores.chroma import Chroma
 
 from vector_store import get_retriever
 from langchain_community.tools.tavily_search import TavilySearchResults
-
 
 local_llm = "llama3.2"
 llm = ChatOllama(model=local_llm, temperature=0, base_url="http://localhost:11434/")
 llm_json_mode = ChatOllama(model=local_llm, temperature=0, format="json", base_url="http://localhost:11434/")
 
-
 os.environ["TAVILY_API_KEY"] = "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"
 web_search_tool = TavilySearchResults(k=3)
+
+CHROMA_PATH = "chroma"  # Path to the directory to save Chroma database
 
 
 class GraphState(TypedDict):
@@ -54,8 +56,13 @@ def retrieve(state):
     question = state["question"]
 
     # Write retrieved documents to documents key in state
-    retriever = get_retriever()
-    documents = retriever.invoke(question)
+    # retriever = get_retriever()
+    # documents = retriever.invoke(question)
+    # return {"documents": documents}
+
+    embedding_function = NomicEmbeddings(model="nomic-embed-text-v1.5", inference_mode="local")
+    db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
+    documents = db.similarity_search_with_relevance_scores(question, k=3)
     return {"documents": documents}
 
 
@@ -125,14 +132,13 @@ def grade_documents(state):
     
     Return JSON with single key, binary_score, that is 'yes' or 'no' score to indicate whether the document contains at least some information that is relevant to the question."""
 
-
     print("---CHECK DOCUMENT RELEVANCE TO QUESTION---")
     question = state["question"]
     documents = state["documents"]
 
     # Score each doc
     filtered_docs = []
-    web_search = "No"
+    do_web_search = "No"
     for d in documents:
         doc_grader_prompt_formatted = doc_grader_prompt.format(
             document=d.page_content, question=question
@@ -151,14 +157,14 @@ def grade_documents(state):
             print("---GRADE: DOCUMENT NOT RELEVANT---")
             # We do not include the document in filtered_docs
             # We set a flag to indicate that we want to run web search
-            web_search = "Yes"
+            do_web_search = "Yes"
             continue
-    return {"documents": filtered_docs, "web_search": web_search}
+    return {"documents": filtered_docs, "web_search": do_web_search}
 
 
 def web_search(state):
     """
-    Web search based based on the question
+    Web search based on the question
 
     Args:
         state (dict): The current graph state
@@ -198,13 +204,12 @@ def route_question(state):
     
     Return JSON with single key, datasource, that is 'websearch' or 'vectorstore' depending on the question."""
 
-
     print("---ROUTE QUESTION---")
-    route_question = llm_json_mode.invoke(
+    _route_question = llm_json_mode.invoke(
         [SystemMessage(content=router_instructions)]
         + [HumanMessage(content=state["question"])]
     )
-    source = json.loads(route_question.content)["datasource"]
+    source = json.loads(_route_question.content)["datasource"]
     if source == "websearch":
         print("---ROUTE QUESTION TO WEB SEARCH---")
         return "websearch"
@@ -306,7 +311,6 @@ def grade_generation_v_documents_and_question(state):
     answer_grader_prompt = """QUESTION: \n\n {question} \n\n STUDENT ANSWER: {generation}. 
     
     Return JSON with two two keys, binary_score is 'yes' or 'no' score to indicate whether the STUDENT ANSWER meets the criteria. And a key, explanation, that contains an explanation of the score."""
-
 
     print("---CHECK HALLUCINATIONS---")
     question = state["question"]

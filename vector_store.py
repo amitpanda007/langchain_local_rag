@@ -7,13 +7,14 @@ from langchain.document_loaders.pdf import PyPDFDirectoryLoader
 from langchain_community.vectorstores import SKLearnVectorStore
 from langchain_nomic.embeddings import NomicEmbeddings
 from langchain.schema import Document
-from langchain.vectorstores.chroma import Chroma
+# from langchain.vectorstores.chroma import Chroma
+from langchain_community.vectorstores import Chroma
 
 # https://medium.com/@callumjmac/implementing-rag-in-langchain-with-chroma-a-step-by-step-guide-16fc21815339
 
 
 CHROMA_PATH = "chroma"  # Path to the directory to save Chroma database
-DATA_PATH = "/upload/"  # Directory to your pdf files
+DATA_PATH = "./upload"  # Directory to your pdf files
 
 
 def get_retriever():
@@ -114,3 +115,5 @@ def generate_data_store():
     save_to_chroma(chunks)  # Save the processed data to a data store
 
 
+if __name__ == "__main__":
+    generate_data_store()
