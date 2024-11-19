@@ -2,8 +2,8 @@ from langgraph.graph import StateGraph
 from IPython.display import Image, display
 from langgraph.graph import END
 
-from state import GraphState, web_search, retrieve, grade_documents, generate, route_question, decide_to_generate, \
-    grade_generation_v_documents_and_question
+from state import GraphState, retrieve, grade_documents, generate, route_question, decide_to_generate, \
+    grade_generation_v_documents_and_question, web_search
 
 workflow = StateGraph(GraphState)
 
@@ -44,4 +44,11 @@ workflow.add_conditional_edges(
 
 # Compile
 graph = workflow.compile()
-display(Image(graph.get_graph().draw_mermaid_png()))
+# display(Image(graph.get_graph().draw_mermaid_png()))
+
+inputs = {"question": "What is the future of AI?", "max_retries": 3}
+for event in graph.stream(inputs, stream_mode="values"):
+    print("*" * 100)
+    # print(event)
+    if 'generation' in event:
+        print(event['generation'])

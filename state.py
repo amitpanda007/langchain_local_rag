@@ -1,5 +1,7 @@
 import operator
 import json
+import os
+import getpass
 from langchain_ollama import ChatOllama
 from typing_extensions import TypedDict
 from typing import List, Annotated
@@ -7,9 +9,17 @@ from langchain.schema import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 
 
+from vector_store import get_retriever
+from langchain_community.tools.tavily_search import TavilySearchResults
+
+
 local_llm = "llama3.2"
-llm = ChatOllama(model=local_llm, temperature=0)
-llm_json_mode = ChatOllama(model=local_llm, temperature=0, format="json")
+llm = ChatOllama(model=local_llm, temperature=0, base_url="http://localhost:11434/")
+llm_json_mode = ChatOllama(model=local_llm, temperature=0, format="json", base_url="http://localhost:11434/")
+
+
+os.environ["TAVILY_API_KEY"] = "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"
+web_search_tool = TavilySearchResults(k=3)
 
 
 class GraphState(TypedDict):
@@ -44,6 +54,7 @@ def retrieve(state):
     question = state["question"]
 
     # Write retrieved documents to documents key in state
+    retriever = get_retriever()
     documents = retriever.invoke(question)
     return {"documents": documents}
 
@@ -86,6 +97,7 @@ def generate(state):
     docs_txt = format_docs(documents)
     rag_prompt_formatted = rag_prompt.format(context=docs_txt, question=question)
     generation = llm.invoke([HumanMessage(content=rag_prompt_formatted)])
+    print(generation.content)
     return {"generation": generation, "loop_step": loop_step + 1}
 
 
@@ -144,6 +156,29 @@ def grade_documents(state):
     return {"documents": filtered_docs, "web_search": web_search}
 
 
+def web_search(state):
+    """
+    Web search based based on the question
+
+    Args:
+        state (dict): The current graph state
+
+    Returns:
+        state (dict): Appended web results to documents
+    """
+
+    print("---WEB SEARCH---")
+    question = state["question"]
+    documents = state.get("documents", [])
+
+    # Web search
+    docs = web_search_tool.invoke({"query": question})
+    web_results = "\n".join([d["content"] for d in docs])
+    web_results = Document(page_content=web_results)
+    documents.append(web_results)
+    return {"documents": documents}
+
+
 def route_question(state):
     """
     Route question to web search or RAG
@@ -157,7 +192,7 @@ def route_question(state):
 
     router_instructions = """You are an expert at routing a user question to a vectorstore or web search.
     
-    The vectorstore contains documents related to agents, prompt engineering, and adversarial attacks.
+    The vectorstore contains documents related to AI.
     
     Use the vectorstore for questions on these topics. For all else, and especially for current events, use web-search.
     
