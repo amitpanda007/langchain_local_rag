@@ -1,15 +1,11 @@
 import operator
 import json
 import os
-import getpass
-
-from langchain_nomic.embeddings import NomicEmbeddings
 from langchain_ollama import ChatOllama
 from typing_extensions import TypedDict
 from typing import List, Annotated
 from langchain.schema import Document
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain.vectorstores.chroma import Chroma
 
 from vector_store import get_retriever
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -56,13 +52,10 @@ def retrieve(state):
     question = state["question"]
 
     # Write retrieved documents to documents key in state
-    # retriever = get_retriever()
-    # documents = retriever.invoke(question)
-    # return {"documents": documents}
-
-    embedding_function = NomicEmbeddings(model="nomic-embed-text-v1.5", inference_mode="local")
-    db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
-    documents = db.similarity_search_with_relevance_scores(question, k=3)
+    retriever = get_retriever()
+    documents = retriever.invoke(question)
+    print(f"Found {len(documents)} documents from vector store")
+    print(documents)
     return {"documents": documents}
 
 

@@ -46,7 +46,7 @@ workflow.add_conditional_edges(
 graph = workflow.compile()
 # display(Image(graph.get_graph().draw_mermaid_png()))
 
-inputs = {"question": "What is the future of AI?", "max_retries": 3}
+inputs = {"question": "how to add studies?", "max_retries": 3}
 for event in graph.stream(inputs, stream_mode="values"):
     print("*" * 100)
     # print(event)
