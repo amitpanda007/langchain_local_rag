@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph
-from IPython.display import Image, display
+# from IPython.display import Image, display
 from langgraph.graph import END
 
 from state import GraphState, retrieve, grade_documents, generate, route_question, decide_to_generate, \

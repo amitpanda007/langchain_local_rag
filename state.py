@@ -6,15 +6,17 @@ from typing_extensions import TypedDict
 from typing import List, Annotated
 from langchain.schema import Document
 from langchain_core.messages import HumanMessage, SystemMessage
-
+from dotenv import load_dotenv
 from vector_store import get_retriever
 from langchain_community.tools.tavily_search import TavilySearchResults
 
-local_llm = "llama3.2"
-llm = ChatOllama(model=local_llm, temperature=0, base_url="http://localhost:11434/")
-llm_json_mode = ChatOllama(model=local_llm, temperature=0, format="json", base_url="http://localhost:11434/")
+load_dotenv()
+OLLAMA_URL = os.getenv('OLLAMA_URL')
+local_llm = os.getenv('LLM_MODEL')
+llm = ChatOllama(model=local_llm, temperature=0, base_url=OLLAMA_URL)
+llm_json_mode = ChatOllama(model=local_llm, temperature=0, format="json", base_url=OLLAMA_URL)
 
-os.environ["TAVILY_API_KEY"] = "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"
+# os.environ["TAVILY_API_KEY"] = ""
 web_search_tool = TavilySearchResults(k=3)
 
 CHROMA_PATH = "chroma"  # Path to the directory to save Chroma database

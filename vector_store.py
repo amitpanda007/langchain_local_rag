@@ -1,7 +1,14 @@
+import os
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import SKLearnVectorStore
-from langchain_nomic import NomicEmbeddings
+# from langchain_nomic import NomicEmbeddings
+from langchain_ollama import OllamaEmbeddings
+from dotenv import load_dotenv
+
+load_dotenv()
+OLLAMA_URL = os.getenv('OLLAMA_URL')
+
 
 CHROMA_PATH = "./db_index"  # Path to the directory to save Chroma database
 DATA_PATH = "./upload"  # Directory to your pdf files
@@ -21,7 +28,8 @@ def embed_documents(f_path):
     vectorstore = SKLearnVectorStore.from_documents(
         documents=doc_splits,
         persist_path=CHROMA_PATH,
-        embedding=NomicEmbeddings(model="nomic-embed-text-v1.5", inference_mode="local"),
+        # embedding=NomicEmbeddings(model="nomic-embed-text-v1.5", inference_mode="local"),
+        embedding=OllamaEmbeddings(base_url=OLLAMA_URL, model="nomic-embed-text"),
         serializer="parquet",
     )
 
@@ -32,7 +40,8 @@ def embed_documents(f_path):
 def get_retriever():
     vectorstore = SKLearnVectorStore(
         persist_path=CHROMA_PATH,
-        embedding=NomicEmbeddings(model="nomic-embed-text-v1.5", inference_mode="local"),
+        # embedding=NomicEmbeddings(model="nomic-embed-text-v1.5", inference_mode="local"),
+        embedding=OllamaEmbeddings(base_url=OLLAMA_URL, model="nomic-embed-text"),
         serializer="parquet"
     )
 
